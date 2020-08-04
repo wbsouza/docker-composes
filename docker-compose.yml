@@ -1,0 +1,74 @@
+version: '3.3'
+
+networks:
+  gitlab_net:
+    driver: bridge
+    ipam:
+      driver: default
+
+services:
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: postgres
+    networks:
+      - gitlab_net
+    env_file: .env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres@adm
+      PGDATA: /var/lib/pgdata
+      SCHEMA: public
+    ports:
+      - "${GITLAB_HOST_POSTGRES_PORT}:5432"
+    volumes:
+      - '${DATA_PATH_HOST}/postgres/data:/var/lib/pgdata'
+      - './scripts/initdb.sh:/docker-entrypoint-initdb.d/initdb.sh'
+
+  redis:
+    image: redis:${REDIS_VERSION}
+    container_name: redis
+    restart: always
+    networks:
+      - gitlab_net
+    command:
+      - --loglevel warning
+    volumes:
+      - ./volumes/redis:/var/lib/redis
+    restart: always
+
+  gitlab:
+    image: gitlab/gitlab-ce:${GITLAB_CE_VERSION}
+    container_name: gitlab
+    environment:
+      env_file: .env
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.${GITLAB_DOMAIN}'
+        letsencrypt['enable'] = true
+        postgresql['enable'] = false
+        gitlab_rails['db_adapter'] = 'postgresql'
+        gitlab_rails['db_encoding'] = 'utf8'
+        gitlab_rails['db_host'] = 'postgres'
+        gitlab_rails['db_port'] = 5432
+        gitlab_rails['db_username'] = '${GITLAB_POSTGRES_USERNAME}'
+        gitlab_rails['db_password'] = '${GITLAB_POSTGRES_PASSWORD}'
+        gitlab_rails['db_database'] = '${GITLAB_POSTGRES_DATABASE}'
+        redis['enable'] = false
+        gitlab_rails['redis_host'] = 'redis'
+        gitlab_rails['redis_database'] = 8
+        gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD}'
+        gitlab_rails['gitlab_shell_ssh_port'] = ${GITLAB_HOST_SSH_PORT}
+    volumes:
+      - ${DATA_PATH_HOST}/gitlab/config:/etc/gitlab
+      - ${DATA_PATH_HOST}/gitlab/data:/var/opt/gitlab
+      - ${GITLAB_HOST_LOG_PATH}:/var/log/gitlab
+    ports:
+      - "${GITLAB_HOST_HTTP_PORT}:80"
+      - "${GITLAB_HOST_HTTPS_PORT}:443"
+      - "${GITLAB_HOST_SSH_PORT}:22"
+    networks:
+      - gitlab_net
+    depends_on:
+      - redis
+      - postgres
+
