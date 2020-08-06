@@ -45,6 +45,7 @@ services:
       - "traefik.http.routers.dashboard-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: line 30
       - "traefik.http.routers.dashboard-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
       - "traefik.http.routers.dashboard-https.rule=Host(`traefik.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.dashboard-https.service=dashboard"
       - "traefik.http.routers.dashboard-https.entrypoints=https" # <== Defining entrypoint for https, **ref: line 31
       - "traefik.http.routers.dashboard-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
       - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
