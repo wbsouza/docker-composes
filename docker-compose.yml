@@ -1,18 +1,17 @@
 version: '3.3'
 
 networks:
-  gitlab_net:
-    driver: bridge
-    ipam:
-      driver: default
+  web:
+    external: true
 
 services:
+
 
   postgres:
     image: postgres:${POSTGRES_VERSION}
     container_name: postgres
     networks:
-      - gitlab_net
+      - web
     env_file: .env
     environment:
       POSTGRES_USER: postgres
@@ -22,15 +21,15 @@ services:
     ports:
       - "${GITLAB_HOST_POSTGRES_PORT}:5432"
     volumes:
-      - '${DATA_PATH_HOST}/postgres/data:/var/lib/pgdata'
-      - './scripts/initdb.sh:/docker-entrypoint-initdb.d/initdb.sh'
+      - '${PWD}/volumes/postgres/data:/var/lib/pgdata'
+      - '${PWD}/initdb.sh:/docker-entrypoint-initdb.d/initdb.sh'
 
   redis:
     image: redis:${REDIS_VERSION}
     container_name: redis
     restart: always
     networks:
-      - gitlab_net
+      - web
     command:
       - --loglevel warning
     volumes:
@@ -43,8 +42,12 @@ services:
     environment:
       env_file: .env
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'https://gitlab.${GITLAB_DOMAIN}'
-        letsencrypt['enable'] = true
+        external_url "http://gitlab.${DOMAIN_NAME}"
+        nginx['listen_port'] = 80
+        nginx['listen_https'] = false
+        nginx['custom_gitlab_server_config'] = "location /.well-known/acme-challenge/ {\n root /var/opt/gitlab/nginx/www/; \n}\n"
+        letsencrypt['enable'] = false
+        letsencrypt['contact_emails'] = ['${LETS_ENCRYPT_CONTACT_EMAIL}']
         postgresql['enable'] = false
         gitlab_rails['db_adapter'] = 'postgresql'
         gitlab_rails['db_encoding'] = 'utf8'
@@ -59,15 +62,15 @@ services:
         gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD}'
         gitlab_rails['gitlab_shell_ssh_port'] = ${GITLAB_HOST_SSH_PORT}
     volumes:
-      - ${DATA_PATH_HOST}/gitlab/config:/etc/gitlab
-      - ${DATA_PATH_HOST}/gitlab/data:/var/opt/gitlab
-      - ${GITLAB_HOST_LOG_PATH}:/var/log/gitlab
+      - ${PWD}/volumes/gitlab/config:/etc/gitlab
+      - ${PWD}/volumes/gitlab/data:/var/opt/gitlab
+      - ${PWD}/volumes/gitlab/logs:/var/log/gitlab
     ports:
       - "${GITLAB_HOST_HTTP_PORT}:80"
       - "${GITLAB_HOST_HTTPS_PORT}:443"
       - "${GITLAB_HOST_SSH_PORT}:22"
     networks:
-      - gitlab_net
+      - web
     depends_on:
       - redis
       - postgres
