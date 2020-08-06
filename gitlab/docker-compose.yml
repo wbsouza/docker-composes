@@ -1,5 +1,4 @@
 version: '3.3'
-
 networks:
   web:
     external: true
@@ -18,7 +17,7 @@ services:
       PGDATA: /var/lib/pgdata
       SCHEMA: public
     ports:
-      - "${GITLAB_HOST_POSTGRES_PORT}:5432"
+      - "${GITLAB_POSTGRES_PORT}:5432"
     volumes:
       - '${PWD}/volumes/postgres/data:/var/lib/pgdata'
       - '${PWD}/initdb.sh:/docker-entrypoint-initdb.d/initdb.sh'
@@ -27,9 +26,9 @@ services:
     image: redis:${REDIS_VERSION}
     container_name: redis
     restart: always
-    env_file: .env
     networks:
       - web
+    env_file: .env
     command:
       - --loglevel warning
     volumes:
@@ -39,16 +38,15 @@ services:
   gitlab:
     image: gitlab/gitlab-ce:${GITLAB_CE_VERSION}
     container_name: gitlab
+    networks:
+      - web
+    env_file: .env
     environment:
-      env_file: .env
       GITLAB_OMNIBUS_CONFIG: |
-        external_url "https://gitlab.${DOMAIN_NAME}"
-        nginx['listen_port'] = 80
+        nginx['listen_port'] = ${GITLAB_HTTP_PORT}
         nginx['listen_https'] = false
-        nginx['proxy_set_headers'] = {
-          "X-Forwarded-Proto" => "https",
-          "X-Forwarded-Ssl" => "on"
-        }
+        nginx['redirect_http_to_https'] = false
+        nginx['proxy_set_headers'] = {"X-Forwarded-Proto" => "https","X-Forwarded-Ssl" => "on"}
         letsencrypt['enable'] = false
         postgresql['enable'] = false
         gitlab_rails['db_adapter'] = 'postgresql'
@@ -62,27 +60,26 @@ services:
         gitlab_rails['redis_host'] = 'redis'
         gitlab_rails['redis_database'] = 8
         gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD}'
-        gitlab_rails['gitlab_shell_ssh_port'] = ${GITLAB_HOST_SSH_PORT}
+        gitlab_rails['gitlab_shell_ssh_port'] = ${GITLAB_SSH_PORT}
+
     volumes:
       - ${PWD}/volumes/gitlab/config:/etc/gitlab
       - ${PWD}/volumes/gitlab/data:/var/opt/gitlab
       - ${PWD}/volumes/gitlab/logs:/var/log/gitlab
     ports:
-      - "${GITLAB_HOST_HTTP_PORT}:80"
-      - "${GITLAB_HOST_SSH_PORT}:22"
-    networks:
-      - web
+      - "${GITLAB_HTTP_PORT}:${GITLAB_HTTP_PORT}"
+      - "${GITLAB_SSH_PORT}:${GITLAB_SSH_PORT}"
     depends_on:
       - redis
       - postgres
     labels:
       #### Labels define the behavior and rules of the traefik proxy for this container ####
       - "traefik.enable=true" # <== Enable traefik to proxy this container
-      - "traefik.http.routers.gitlab-web.rule=Host(`gitlab.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
-      - "traefik.http.routers.gitlab-web.entrypoints=web" # <== Defining the entrypoint for http, **ref: traefik docker-compose
-      - "traefik.http.routers.gitlab-web.middlewares=redirect@file" # <== This is a middleware to redirect to https
-      - "traefik.http.routers.gitlab-secured.rule=Host(`gitlab.${DOMAIN_NAME}`)" # <== Your Domain Name for the https rule 
-      - "traefik.http.routers.gitlab-secured.entrypoints=web-secured" # <== Defining entrypoint for https, **ref: traefik docker-compose
-      - "traefik.http.routers.gitlab-secured.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
-      - "traefik.http.services.gitlab.loadbalancer.server.port=80"
+      - "traefik.http.routers.gitlab-http.rule=Host(`gitlab.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.gitlab-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: traefik docker-compose
+      - "traefik.http.routers.gitlab-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
+      - "traefik.http.routers.gitlab-https.rule=Host(`gitlab.${DOMAIN_NAME}`)" # <== Your Domain Name for the https rule 
+      - "traefik.http.routers.gitlab-https.entrypoints=https" # <== Defining entrypoint for https, **ref: traefik docker-compose
+      - "traefik.http.routers.gitlab-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
+      - "traefik.http.services.gitlab.loadbalancer.server.port=${GITLAB_HTTP_PORT}"
 

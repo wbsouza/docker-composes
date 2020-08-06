@@ -3,7 +3,26 @@ networks:
   web:
     external: true
 
+volumes:
+  sonarqube_conf:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_lib:
+
 services:
+
+  sonarqube_db:
+    image: postgres
+    container_name: sonarqube_db
+    networks:
+      - web
+    env_file: .env
+    environment:
+      - POSTGRES_USER=${SONAR_DATABASE_USERNAME}
+      - POSTGRES_PASSWORD=${SONAR_DATABASE_PASSWORD}
+    volumes:
+      - ${PWD}/volumes/postgresql:/var/lib/postgresql
+
   sonarqube:
     image: sonarqube:8.2-community
     container_name: sonarqube
@@ -26,16 +45,6 @@ services:
       - sonar.auth.gitlab.applicationId=00386e366efc8e1b5ba15cd8c28d2f6f4009b27f4dc938318e66e41ab787f6fe
       - sonar.auth.gitlab.secret=49e54894754a92c911f74ba21004536f1ee78ed2d352074adde84edae43530d5
       - sonar.pullrequest.gitlab.instanceUrl=https://gitlab.${DOMAIN_NAME}
-    labels:
-      #### Labels define the behavior and rules of the traefik proxy for this container ####
-      - "traefik.enable=true" # <== Enable traefik to proxy this container
-      - "traefik.http.routers.sonarqube-web.rule=Host(`sonar.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
-      - "traefik.http.routers.sonarqube-web.entrypoints=web" # <== Defining the entrypoint for http, **ref: traefik docker-compose
-      - "traefik.http.routers.sonarqube-web.middlewares=redirect@file" # <== This is a middleware to redirect to https
-      - "traefik.http.routers.sonarqube-secured.rule=Host(`sonar.${DOMAIN_NAME}`)" # <== Your Domain Name for the https rule 
-      - "traefik.http.routers.sonarqube-secured.entrypoints=web-secured" # <== Defining entrypoint for https, **ref: traefik docker-compose
-      - "traefik.http.routers.sonarqube-secured.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
-
     volumes:
       - sonarqube_conf:/opt/sonarqube/conf
       - sonarqube_lib:/opt/sonarqube/lib
@@ -43,23 +52,16 @@ services:
       - sonarqube_extensions:/opt/sonarqube/extensions
     ulimits:
       nofile:
-       soft: 65536
-       hard: 65536
+        soft: 65536
+        hard: 65536
+    labels:
+      #### Labels define the behavior and rules of the traefik proxy for this container ####
+      - "traefik.enable=true" # <== Enable traefik to proxy this container
+      - "traefik.http.routers.sonarqube-http.rule=Host(`sonar.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.sonarqube-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: traefik docker-compose
+      - "traefik.http.routers.sonarqube-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
+      - "traefik.http.routers.sonarqube-https.rule=Host(`sonar.${DOMAIN_NAME}`)" # <== Your Domain Name for the https rule 
+      - "traefik.http.routers.sonarqube-https.entrypoints=https" # <== Defining entrypoint for https, **ref: traefik docker-compose
+      - "traefik.http.routers.sonarqube-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
+      - "traefik.http.services.sonarqube.loadbalancer.server.port=9000"
 
-  sonarqube_db:
-    image: postgres
-    container_name: sonarqube_db
-    networks:
-      - web
-    env_file: .env
-    environment:
-      - POSTGRES_USER=${SONAR_DATABASE_USERNAME}
-      - POSTGRES_PASSWORD=${SONAR_DATABASE_PASSWORD}
-    volumes:
-      - ${PWD}/volumes/postgresql:/var/lib/postgresql
-
-volumes:
-  sonarqube_conf:
-  sonarqube_data:
-  sonarqube_extensions:
-  sonarqube_lib:
