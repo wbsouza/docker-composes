@@ -57,11 +57,13 @@ services:
     labels:
       #### Labels define the behavior and rules of the traefik proxy for this container ####
       - "traefik.enable=true" # <== Enable traefik to proxy this container
-      - "traefik.http.routers.sonarqube-http.rule=Host(`sonar.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
-      - "traefik.http.routers.sonarqube-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: traefik docker-compose
-      - "traefik.http.routers.sonarqube-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
-      - "traefik.http.routers.sonarqube-https.rule=Host(`sonar.${DOMAIN_NAME}`)" # <== Your Domain Name for the https rule 
-      - "traefik.http.routers.sonarqube-https.entrypoints=https" # <== Defining entrypoint for https, **ref: traefik docker-compose
-      - "traefik.http.routers.sonarqube-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
-      - "traefik.http.services.sonarqube.loadbalancer.server.port=9000"
+      - "traefik.http.routers.sonar-http.rule=Host(`sonar.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.sonar-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: line 30
+      - "traefik.http.routers.sonar-http.service=sonar"
+      - "traefik.http.routers.sonar-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
+      - "traefik.http.routers.sonar-https.rule=Host(`sonar.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.sonar-https.entrypoints=https" # <== Defining entrypoint for https, **ref: line 31
+      - "traefik.http.routers.sonar-https.service=sonar"
+      - "traefik.http.routers.sonar-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
+      - "traefik.http.services.sonar.loadbalancer.server.port=9000"
 

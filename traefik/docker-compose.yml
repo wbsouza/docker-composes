@@ -19,18 +19,18 @@ services:
       - --api.debug=true # <== Enabling additional endpoints for debugging and profiling
       ## Log Settings (options: ERROR, DEBUG, PANIC, FATAL, WARN, INFO) - https://docs.traefik.io/observability/logs/ ##
       - --log=true
-      - --log.level=WARN # <== Setting the level of the logs from traefik
+      - --log.level=INFO # <== Setting the level of the logs from traefik
       ## Provider Settings - https://docs.traefik.io/providers/docker/#provider-configuration ##
       - --providers.docker=true # <== Enabling docker as the provider for traefik
       - --providers.docker.exposedbydefault=false # <== Don't expose every container to traefik, only expose enabled ones
       - --providers.file.filename=/dynamic.yml # <== Referring to a dynamic configuration file
       - --providers.docker.network=web # <== Operate on the docker network named web
       ## Entrypoints Settings - https://docs.traefik.io/routing/entrypoints/#configuration ##
-      - --entrypoints.http.address=:80 # <== Defining an entrypoint for port :80 named web
-      - --entrypoints.https.address=:443 # <== Defining an entrypoint for https on port :443 named web-secured
+      - --entrypoints.http.address=:80 # <== Defining an entrypoint for port :80 named http
+      - --entrypoints.https.address=:443 # <== Defining an entrypoint for https on port :443 named http
       ## Certificate Settings (Let's Encrypt) -  https://docs.traefik.io/https/acme/#configuration-examples ##
       - --certificatesresolvers.omega_httpchallenge.acme.httpchallenge=true  # <== Enable TLS-ALPN-01 to generate and renew ACME certs
-      - --certificatesresolvers.omega_httpchallenge.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.omega_httpchallenge.acme.httpchallenge.entrypoint=http
       - --certificatesresolvers.omega_httpchallenge.acme.email=${LETS_ENCRYPT_CONTACT_EMAIL}
       - --certificatesresolvers.omega_httpchallenge.acme.storage=/letsencrypt/acme.json  # <== Defining acme file to store cert information
     networks:
@@ -41,13 +41,14 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     labels:  
       - "traefik.enable=true" # <== Enable traefik to proxy this container
-      - "traefik.http.routers.dashboard-http.rule=Host(`traefik.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
-      - "traefik.http.routers.dashboard-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: line 30
-      - "traefik.http.routers.dashboard-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
-      - "traefik.http.routers.dashboard-https.rule=Host(`traefik.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
-      - "traefik.http.routers.dashboard-https.service=dashboard"
-      - "traefik.http.routers.dashboard-https.entrypoints=https" # <== Defining entrypoint for https, **ref: line 31
-      - "traefik.http.routers.dashboard-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
-      - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
+      - "traefik.http.routers.monitor-http.rule=Host(`monitor.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.monitor-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: line 30
+      - "traefik.http.routers.monitor-http.service=monitor"
+      - "traefik.http.routers.monitor-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
+      - "traefik.http.routers.monitor-https.rule=Host(`monitor.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.monitor-https.entrypoints=https" # <== Defining entrypoint for https, **ref: line 31
+      - "traefik.http.routers.monitor-https.service=monitor"
+      - "traefik.http.routers.monitor-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
+      - "traefik.http.services.monitor.loadbalancer.server.port=8080"
 
 
