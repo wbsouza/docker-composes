@@ -1,0 +1,15 @@
+version: "3"
+networks:
+  web:
+    external: true
+
+services:
+  plantuml:
+    image: plantuml/plantuml-server:jetty-v1.2020.14
+    container_name: plantuml
+    networks:
+      - web
+    env_file: .env
+    ports:
+      - "11000:8080"
+
