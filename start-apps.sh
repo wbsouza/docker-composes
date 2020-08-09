@@ -1,8 +1,12 @@
 #!/bin/sh
 
-docker network create web
+WEB_NETWORK=$(docker network ls | grep web)
+if [ "${WEB_NETWORK}" == "" ]; then
+  docker network create web
+fi
 
-docker-compose -f traefik/docker-compose.yml up -d
-docker-compose -f sonar/docker-compose.yml up -d
-docker-compose -f gitlab/docker-compose.yml up -d
+(cd traefik; docker-compose up -d)
+(cd sonar; docker-compose up -d)
+(cd gitlab; docker-compose up -d)
+(cd plantuml; docker-compose up -d)
 
