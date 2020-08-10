@@ -4,16 +4,16 @@ networks:
     external: true
 
 volumes:
-  sonarqube_conf:
-  sonarqube_data:
-  sonarqube_extensions:
-  sonarqube_lib:
+  sonar_conf:
+  sonar_data:
+  sonar_lib:
+  sonar_extensions:
+  sonar_postgres:
 
 services:
-
-  sonarqube_db:
+  sonar_db:
     image: postgres
-    container_name: sonarqube_db
+    container_name: sonar_db
     networks:
       - web
     env_file: .env
@@ -21,35 +21,33 @@ services:
       - POSTGRES_USER=${SONAR_DATABASE_USERNAME}
       - POSTGRES_PASSWORD=${SONAR_DATABASE_PASSWORD}
     volumes:
-      - ${PWD}/volumes/postgresql:/var/lib/postgresql
+      - sonar_postgres:/var/lib/postgresql
 
-  sonarqube:
+  sonar:
     image: sonarqube:8.2-community
-    container_name: sonarqube
+    container_name: sonar
     networks:
       - web
     depends_on:
-      - sonarqube_db
-    ports:
-      - '9000:9000'
+      - sonar_db
     env_file: .env
     environment:
       - sonar.jdbc.username=${SONAR_DATABASE_USERNAME}
       - sonar.jdbc.password=${SONAR_DATABASE_PASSWORD}
-      - sonar.jdbc.url=jdbc:postgresql://sonarqube_db:5432/sonar
+      - sonar.jdbc.url=jdbc:postgresql://sonar_db:5432/sonar
 
       # GitLab OAuth Configurations
       - sonar.core.serverBaseURL=https://sonar.${DOMAIN_NAME}
       - sonar.auth.gitlab.enabled=true
       - sonar.auth.gitlab.url=https://gitlab.${DOMAIN_NAME}
-      - sonar.auth.gitlab.applicationId=00386e366efc8e1b5ba15cd8c28d2f6f4009b27f4dc938318e66e41ab787f6fe
-      - sonar.auth.gitlab.secret=49e54894754a92c911f74ba21004536f1ee78ed2d352074adde84edae43530d5
+      - sonar.auth.gitlab.applicationId=9e73f676a2469cfc0755b2196fbcfa11cf42d65bcd42bfefd30db4538b21d758
+      - sonar.auth.gitlab.secret=d3ed97bd1dc10d4be8982aa54916610bbafb67b2a1c661949f16491a8e31cf4f
       - sonar.pullrequest.gitlab.instanceUrl=https://gitlab.${DOMAIN_NAME}
     volumes:
-      - sonarqube_conf:/opt/sonarqube/conf
-      - sonarqube_lib:/opt/sonarqube/lib
-      - sonarqube_data:/opt/sonarqube/data
-      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonar_conf:/opt/sonarqube/conf
+      - sonar_lib:/opt/sonarqube/lib
+      - sonar_data:/opt/sonarqube/data
+      - sonar_extensions:/opt/sonarqube/extensions
     ulimits:
       nofile:
         soft: 65536

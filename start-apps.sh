@@ -23,12 +23,11 @@ fi
 
 if [ "${TRAEFIK_IP}" != "" ]; then
   echo "Exposing the Traefik ports (80, 443) to the external world..."
-  sudo iptables -I FORWARD 1 -s $HOST_IP -d $TRAEFIK_IP -p tcp --dport 80 -j ACCEPT
-  sudo iptables -I FORWARD 1 -s $HOST_IP -d $TRAEFIK_IP -p tcp --dport 443 -j ACCEPT
-  sudo iptables -A FORWARD -d $TRAEFIK_IP -p tcp --dport 80 -j DROP
-  sudo iptables -A FORWARD -d $TRAEFIK_IP -p tcp --dport 443 -j DROP
+  iptables -I FORWARD 1 -s $HOST_IP -d $TRAEFIK_IP -p tcp --dport 80 -j ACCEPT
+  iptables -I FORWARD 1 -s $HOST_IP -d $TRAEFIK_IP -p tcp --dport 443 -j ACCEPT
+  iptables -A FORWARD -d $TRAEFIK_IP -p tcp --dport 80 -j DROP
+  iptables -A FORWARD -d $TRAEFIK_IP -p tcp --dport 443 -j DROP
 else
   echo ">>> Error trying to get the traefik IP address"
 fi
-
 

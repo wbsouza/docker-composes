@@ -1,0 +1,33 @@
+version: "3"
+networks:
+  web:
+    external: true
+
+services:
+  gitlab-runner1:
+    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    container_name: runner1
+    networks:
+      - web
+    volumes: 
+      - "${PWD}/volumes/etc/gitlab-runner1:/etc/gitlab-runner:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  gitlab-runner2:
+    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    container_name: runner2
+    networks:
+      - web
+    volumes: 
+      - "${PWD}/volumes/etc/gitlab-runner2:/etc/gitlab-runner:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  gitlab-runner3:
+    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    container_name: runner3
+    networks:
+      - web
+    volumes: 
+      - "${PWD}/volumes/etc/gitlab-runner3:/etc/gitlab-runner:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+

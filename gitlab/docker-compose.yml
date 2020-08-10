@@ -1,8 +1,19 @@
-version: '3.3'
+version: '3'
 
 networks:
   web:
     external: true
+
+volumes:
+  gitlab_postgres:
+  gitlab_redis:
+  gitlab_configs:
+  gitlab_data:
+  gitlab_logs:
+  gitlab_runner1:
+  gitlab_runner2:
+  gitlab_runner3:
+
 
 services:
 
@@ -15,13 +26,11 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres@adm
-      PGDATA: /var/lib/pgdata
+      PGDATA: /var/lib/postgresql/data
       SCHEMA: public
-    ports:
-      - "${GITLAB_POSTGRES_PORT}:5432"
     volumes:
-      - '${PWD}/volumes/postgres/data:/var/lib/pgdata'
-      - '${PWD}/initdb.sh:/docker-entrypoint-initdb.d/initdb.sh'
+      - gitlab_postgres:/var/lib/postgresql
+      - '${PWD}/scripts/initdb.sh:/docker-entrypoint-initdb.d/initdb.sh'
 
   redis:
     image: redis:${REDIS_VERSION}
@@ -33,7 +42,7 @@ services:
     command:
       - --loglevel warning
     volumes:
-      - ./volumes/redis:/var/lib/redis
+      - gitlab_redis:/var/lib/redis
     restart: always
 
   gitlab:
@@ -93,8 +102,8 @@ services:
 
         # https://gitlab.com/gitlab-org/gitlab-ce/issues/30473
         # https://gitlab.com/gitlab-org/omnibus-gitlab/blob/master/files/gitlab-config-template/gitlab.rb.template
-        gitlab_rails['gitlab_default_can_create_group'] = false
-        gitlab_rails['gitlab_username_changing_enabled'] = false
+        # gitlab_rails['gitlab_default_can_create_group'] = false
+        # gitlab_rails['gitlab_username_changing_enabled'] = false
         # gitlab_rails['gitlab_default_projects_features_issues'] = true
         # gitlab_rails['gitlab_default_projects_features_merge_requests'] = true
         # gitlab_rails['gitlab_default_projects_features_wiki'] = true
@@ -103,19 +112,16 @@ services:
         # gitlab_rails['gitlab_default_projects_features_container_registry'] = true
 
     volumes:
-      - ${PWD}/volumes/gitlab/config:/etc/gitlab
-      - ${PWD}/volumes/gitlab/data:/var/opt/gitlab
-      - ${PWD}/volumes/gitlab/logs:/var/log/gitlab
+      - gitlab_configs:/etc/gitlab
+      - gitlab_data/var/opt/gitlab
+      - gitlab_logs:/var/log/gitlab
     ports:
-      - "${GITLAB_HTTP_PORT}:${GITLAB_HTTP_PORT}"
-      - "${GITLAB_REGISTRY_HTTP_PORT}:${GITLAB_REGISTRY_HTTP_PORT}"
-      - "${GITLAB_PAGES_HTTP_PORT}:${GITLAB_PAGES_HTTP_PORT}"
       - "${GITLAB_SSH_PORT}:22"
     networks:
       - web
     depends_on:
-      - redis
       - postgres
+      - redis
     labels:
       #### gitlab traefik configs
       - "traefik.enable=true"
@@ -149,4 +155,46 @@ services:
       - "traefik.http.routers.registry-https.tls.certresolver=omega_httpchallenge"
       - "traefik.http.services.registry.loadbalancer.server.port=${GITLAB_REGISTRY_HTTP_PORT}"
 
+  gitlab-runner1:
+    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    container_name: runner1
+    hostname: runner1
+    env_file: .env
+    networks:
+      - web
+    depends_on:
+      - gitlab
+    volumes: 
+      - "${PWD}/scripts:/scripts"
+      - "gitlab_runner1:/etc/gitlab-runner:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+
+  gitlab-runner2:
+    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    container_name: runner2
+    hostname: runner2
+    env_file: .env
+    networks:
+      - web
+    depends_on:
+      - gitlab
+    volumes: 
+      - "${PWD}/scripts:/scripts"
+      - "gitlab_runner2:/etc/gitlab-runner:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  gitlab-runner3:
+    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    container_name: runner3
+    hostname: runner3
+    env_file: .env
+    networks:
+      - web
+    depends_on:
+      - gitlab
+    volumes: 
+      - "${PWD}/scripts:/scripts"
+      - "gitlab_runner3:/etc/gitlab-runner:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
 

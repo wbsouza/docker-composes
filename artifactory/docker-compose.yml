@@ -1,0 +1,27 @@
+version: "3"
+networks:
+  web:
+    external: true
+
+services:
+  artifactory:
+    image: docker.bintray.io/jfrog/artifactory-oss
+    container_name: artifactory
+    networks:
+      - web
+    env_file: .env
+    ports:
+      - "12000:8081"
+    labels:  
+      - "traefik.enable=true" # <== Enable traefik to proxy this container
+      - "traefik.http.routers.maven-http.rule=Host(`maven.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.maven-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: line 30
+      - "traefik.http.routers.maven-http.service=maven"
+      - "traefik.http.routers.maven-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
+      - "traefik.http.routers.maven-https.rule=Host(`maven.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.maven-https.entrypoints=https" # <== Defining entrypoint for https, **ref: line 31
+      - "traefik.http.routers.maven-https.service=maven"
+      - "traefik.http.routers.maven-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
+      - "traefik.http.services.maven.loadbalancer.server.port=8081"
+
+
