@@ -21,6 +21,8 @@ if [ "${TRAEFIK_IP}" == "" ]; then
   TRAEFIK_IP=$(docker inspect --format "{{ .NetworkSettings.IPAddress }}" traefik)
 fi
 
+exit 0
+
 if [ "${TRAEFIK_IP}" != "" ]; then
   echo "Exposing the Traefik ports (80, 443) to the external world..."
   iptables -I FORWARD 1 -s $HOST_IP -d $TRAEFIK_IP -p tcp --dport 80 -j ACCEPT
