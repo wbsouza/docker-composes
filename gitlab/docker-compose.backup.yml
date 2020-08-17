@@ -1,0 +1,200 @@
+version: '3'
+
+networks:
+  web:
+    external: true
+
+volumes:
+  gitlab_postgres:
+  gitlab_redis:
+  gitlab_configs:
+  gitlab_data:
+  gitlab_logs:
+  gitlab_runner1:
+  gitlab_runner2:
+  gitlab_runner3:
+
+
+services:
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: postgres
+    networks:
+      - web
+    env_file: .env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres@adm
+      PGDATA: /var/lib/postgresql/data
+      SCHEMA: public
+    volumes:
+      - gitlab_postgres:/var/lib/postgresql
+      - '${PWD}/assets/initdb.sh:/docker-entrypoint-initdb.d/initdb.sh'
+
+  redis:
+    image: redis:${REDIS_VERSION}
+    container_name: redis
+    restart: always
+    env_file: .env
+    networks:
+      - web
+    command:
+      - --loglevel warning
+    volumes:
+      - gitlab_redis:/var/lib/redis
+    restart: always
+
+  gitlab:
+    image: gitlab/gitlab-ce:${GITLAB_VERSION}-ce.0
+    container_name: gitlab
+    environment:
+      env_file: .env
+      GITLAB_OMNIBUS_CONFIG: |
+
+        external_url "http://gitlab.${DOMAIN_NAME}"
+        nginx['listen_port'] = ${GITLAB_HTTP_PORT}
+        nginx['listen_https'] = false
+        nginx['custom_gitlab_server_config'] = "location /.well-known/acme-challenge/ {\n root /var/opt/gitlab/nginx/www/; \n}\n"
+        letsencrypt['enable'] = false
+
+        postgresql['enable'] = false
+        gitlab_rails['db_adapter'] = 'postgresql'
+        gitlab_rails['db_encoding'] = 'utf8'
+        gitlab_rails['db_host'] = 'postgres'
+        gitlab_rails['db_port'] = 5432
+        gitlab_rails['db_username'] = '${GITLAB_POSTGRES_USERNAME}'
+        gitlab_rails['db_password'] = '${GITLAB_POSTGRES_PASSWORD}'
+        gitlab_rails['db_database'] = '${GITLAB_POSTGRES_DATABASE}'
+
+        redis['enable'] = false
+        gitlab_rails['redis_host'] = 'redis'
+        gitlab_rails['redis_database'] = 8
+        gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD}'
+        gitlab_rails['gitlab_shell_ssh_port'] = ${GITLAB_SSH_PORT}
+      
+        # GitLab Pages
+        pages_external_url "http://pages.${DOMAIN_NAME}"
+        pages_nginx['listen_port']  = ${GITLAB_PAGES_HTTP_PORT}
+        pages_nginx['listen_https'] = false
+        pages_nginx['proxy_set_headers'] = {"X-Forwarded-Proto" => "https","X-Forwarded-Ssl" => "on"}
+        gitlab_pages['inplace_chroot'] = true
+        pages_nginx['enable'] = true
+        gitlab_rails['pages_host'] = "registry.${DOMAIN_NAME}"
+
+        # GitLab Docker Registry
+        registry_external_url "http://registry.${DOMAIN_NAME}"
+        gitlab_rails['registry_enabled'] = true
+        registry['enable'] = true
+        registry_nginx['enable'] = true
+        registry_nginx['listen_port'] = ${GITLAB_REGISTRY_HTTP_PORT}
+        registry_nginx['listen_https'] = false
+        registry_nginx['proxy_set_headers'] = {"X-Forwarded-Proto" => "https","X-Forwarded-Ssl" => "on"}
+        gitlab_rails['registry_host'] = "registry.${DOMAIN_NAME}"
+        gitlab_rails['registry_api_url'] = "registry.${DOMAIN_NAME}"
+
+
+        # https://docs.gitlab.com/ee/administration/monitoring/prometheus/
+        # https://gitlab.com/gitlab-org/grafana-dashboards/tree/master/omnibus
+        prometheus_monitoring['enable'] = true
+        prometheus['listen_address'] = '0.0.0.0:9090'
+
+
+        # https://gitlab.com/gitlab-org/gitlab-ce/issues/30473
+        # https://gitlab.com/gitlab-org/omnibus-gitlab/blob/master/files/gitlab-config-template/gitlab.rb.template
+        # gitlab_rails['gitlab_default_can_create_group'] = false
+        # gitlab_rails['gitlab_username_changing_enabled'] = false
+        # gitlab_rails['gitlab_default_projects_features_issues'] = true
+        # gitlab_rails['gitlab_default_projects_features_merge_requests'] = true
+        # gitlab_rails['gitlab_default_projects_features_wiki'] = true
+        # gitlab_rails['gitlab_default_projects_features_snippets'] = true
+        # gitlab_rails['gitlab_default_projects_features_builds'] = true
+        # gitlab_rails['gitlab_default_projects_features_container_registry'] = true
+
+    volumes:
+      - gitlab_configs:/etc/gitlab
+      - gitlab_data/var/opt/gitlab
+      - gitlab_logs:/var/log/gitlab
+    ports:
+      - "${GITLAB_SSH_PORT}:22"
+    networks:
+      - web
+    depends_on:
+      - postgres
+      - redis
+    labels:
+      #### gitlab traefik configs
+      - "traefik.enable=true"
+      - "traefik.http.routers.gitlab-http.rule=Host(`gitlab.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.gitlab-http.entrypoints=http"
+      - "traefik.http.routers.gitlab-http.service=gitlab"
+      - "traefik.http.routers.gitlab-http.middlewares=redirect@file"
+      - "traefik.http.routers.gitlab-https.rule=Host(`gitlab.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.gitlab-https.entrypoints=https"
+      - "traefik.http.routers.gitlab-https.service=gitlab"
+      - "traefik.http.routers.gitlab-https.tls.certresolver=omega_httpchallenge"
+      - "traefik.http.services.gitlab.loadbalancer.server.port=${GITLAB_HTTP_PORT}"
+      #### pages traefik configs
+      - "traefik.http.routers.pages-http.rule=Host(`pages.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.pages-http.entrypoints=http"
+      - "traefik.http.routers.pages-http.service=pages"
+      - "traefik.http.routers.pages-http.middlewares=redirect@file"
+      - "traefik.http.routers.pages-https.rule=Host(`pages.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.pages-https.entrypoints=https"
+      - "traefik.http.routers.pages-https.service=pages"
+      - "traefik.http.routers.pages-https.tls.certresolver=omega_httpchallenge"
+      - "traefik.http.services.pages.loadbalancer.server.port=${GITLAB_PAGES_HTTP_PORT}"
+      #### registry traefik configs
+      - "traefik.http.routers.registry-http.rule=Host(`registry.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.registry-http.entrypoints=http"
+      - "traefik.http.routers.registry-http.service=registry"
+      - "traefik.http.routers.registry-http.middlewares=redirect@file"
+      - "traefik.http.routers.registry-https.rule=Host(`registry.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.registry-https.entrypoints=https"
+      - "traefik.http.routers.registry-https.service=registry"
+      - "traefik.http.routers.registry-https.tls.certresolver=omega_httpchallenge"
+      - "traefik.http.services.registry.loadbalancer.server.port=${GITLAB_REGISTRY_HTTP_PORT}"
+
+  gitlab-runner1:
+    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    container_name: runner1
+    hostname: runner1
+    env_file: .env
+    networks:
+      - web
+    depends_on:
+      - gitlab
+    volumes: 
+      - "${PWD}/assets:/assets"
+      - "gitlab_runner1:/etc/gitlab-runner:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+
+  gitlab-runner2:
+    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    container_name: runner2
+    hostname: runner2
+    env_file: .env
+    networks:
+      - web
+    depends_on:
+      - gitlab
+    volumes: 
+      - "${PWD}/assets:/assets"
+      - "gitlab_runner2:/etc/gitlab-runner:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  gitlab-runner3:
+    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    container_name: runner3
+    hostname: runner3
+    env_file: .env
+    networks:
+      - web
+    depends_on:
+      - gitlab
+    volumes: 
+      - "${PWD}/assets:/assets"
+      - "gitlab_runner3:/etc/gitlab-runner:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
