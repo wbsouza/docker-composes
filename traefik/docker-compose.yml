@@ -38,17 +38,28 @@ services:
     volumes:
       - "${PWD}/volumes/letsencrypt:/letsencrypt"
       - "${PWD}/dynamic.yml:/dynamic.yml"
+      - "${PWD}/etc/passwd:${PWD}/etc/passwd"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     labels:  
-      - "traefik.enable=true" # <== Enable traefik to proxy this container
-      - "traefik.http.routers.monitor-http.rule=Host(`monitor.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
-      - "traefik.http.routers.monitor-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: line 30
-      - "traefik.http.routers.monitor-http.service=monitor"
-      - "traefik.http.routers.monitor-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
-      - "traefik.http.routers.monitor-https.rule=Host(`monitor.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
-      - "traefik.http.routers.monitor-https.entrypoints=https" # <== Defining entrypoint for https, **ref: line 31
-      - "traefik.http.routers.monitor-https.service=monitor"
-      - "traefik.http.routers.monitor-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
-      - "traefik.http.services.monitor.loadbalancer.server.port=8080"
+      - traefik.enable=true
+      - traefik.http.routers.monitor-http.rule=Host(`monitor.${DOMAIN_NAME}`)
+      - traefik.http.routers.monitor-http.entrypoints=http
+      - traefik.http.routers.monitor-http.service=monitor
+      - traefik.http.routers.monitor-http.middlewares=redirect@file
+      - traefik.http.routers.monitor-https.rule=Host(`monitor.${DOMAIN_NAME}`)
+      - traefik.http.routers.monitor-https.entrypoints=https
+      - traefik.http.routers.monitor-https.tls=true
+      - traefik.http.routers.monitor-https.tls.options=default
+      - traefik.http.routers.monitor-https.service=monitor
+      - traefik.http.routers.monitor-https.tls.certresolver=omega_httpchallenge
+      - traefik.http.services.monitor.loadbalancer.server.port=8080
+      # auth
+      - traefik.http.routers.monitor-https.middlewares=auth,securityheaders
+      - traefik.http.middlewares.auth.basicauth.removeheader=true
+      - traefik.http.middlewares.auth.basicauth.usersFile=${PWD}/etc/passwd
+      - traefik.http.middlewares.securityheaders.headers.forceSTSHeader=true
+      - traefik.http.middlewares.securityheaders.headers.stsPreload=true
+      - traefik.http.middlewares.securityheaders.headers.stsSeconds=315360000
+      - traefik.http.middlewares.securityheaders.headers.stsIncludeSubdomains=true
 
 
