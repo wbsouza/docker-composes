@@ -12,4 +12,16 @@ services:
     env_file: .env
     ports:
       - "11000:8080"
+    labels:
+      #### Labels define the behavior and rules of the traefik proxy for this container ####
+      - "traefik.enable=true" # <== Enable traefik to proxy this container
+      - "traefik.http.routers.plantuml-http.rule=Host(`plantuml.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.plantuml-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: line 30
+      - "traefik.http.routers.plantuml-http.service=plantuml"
+      - "traefik.http.routers.plantuml-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
+      - "traefik.http.routers.plantuml-https.rule=Host(`plantuml.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
+      - "traefik.http.routers.plantuml-https.entrypoints=https" # <== Defining entrypoint for https, **ref: line 31
+      - "traefik.http.routers.plantuml-https.service=plantuml"
+      - "traefik.http.routers.plantuml-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
+      - "traefik.http.services.plantuml.loadbalancer.server.port=8080"
 

@@ -2,10 +2,26 @@
 # https://docs.gitlab.com/omnibus/settings/nginx.html#using-a-non-bundled-web-server
 
 version: '3.6'
+
+networks:
+  web:
+    external: true
+      
+
+volumes:
+  gitlab_data:
+  gitlab_data_pages:
+  gitlab_data_rails_pages:
+  gitlab_logs:
+  gitlab_postgres:
+  gitlab_redis:
+  gitlab_runner_conf:
+
+
 services:
 
   gitlab:
-    image: gitlab/gitlab-ce:${GITLAB_VERSION}-ce.0 
+    image: gitlab/gitlab-ce:${GITLAB_VERSION}
     restart: always
     container_name: gitlab
     hostname: "${GITLAB_HOST}"
@@ -19,8 +35,8 @@ services:
       - ${GITLAB_HOST_IP}:${GITLAB_SSH_PORT}:22
     volumes:
       - './assets/gitlab.rb:/etc/gitlab/gitlab.rb'
-      - './volumes/logs:/var/log/gitlab'
-      - './volumes/data:/var/opt/gitlab'
+      - 'gitlab_logs:/var/log/gitlab'
+      - 'gitlab_data:/var/opt/gitlab'
     depends_on:
       - redis
       - postgres
@@ -61,7 +77,7 @@ services:
 
 
   pages:
-    image: gitlab/gitlab-ce:${GITLAB_VERSION}-ce.0
+    image: gitlab/gitlab-ce:${GITLAB_VERSION}
     restart: always
     container_name: gitlab_pages
     hostname: "${GITLAB_PAGES_HOST}"
@@ -84,8 +100,8 @@ services:
       - -pages-root
       - "/var/opt/gitlab/gitlab-rails/shared/pages"
     volumes:
-      - './volumes/data/gitlab-pages:/var/opt/gitlab/gitlab-pages:rw'
-      - './volumes/data/gitlab-rails/shared/pages:/var/opt/gitlab/gitlab-rails/shared/pages:ro'
+      - 'gitlab_data_pages:/var/opt/gitlab/gitlab-pages:rw'
+      - 'gitlab_data_rails_pages:/var/opt/gitlab/gitlab-rails/shared/pages:ro'
     networks:
       - web
 
@@ -101,7 +117,7 @@ services:
       PGDATA: /var/lib/postgresql/data
       SCHEMA: public
     volumes:
-      - '${PWD}/volumes/postgresql:/var/lib/postgresql'
+      - 'gitlab_postgres:/var/lib/postgresql'
       - '${PWD}/assets/initdb.sh:/docker-entrypoint-initdb.d/initdb.sh'
 
   redis:
@@ -114,12 +130,12 @@ services:
     command:
       - --loglevel warning
     volumes:
-      - '${PWD}/volumes/redis/:/var/lib/redis'
+      - 'gitlab_redis:/var/lib/redis'
     restart: always
 
 
   gitlab-runner1:
-    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    image: gitlab/gitlab-runner:${GITLAB_RUNNER_VERSION}
     container_name: runner1
     hostname: runner1
     env_file: .env
@@ -129,12 +145,13 @@ services:
       - gitlab
     volumes: 
       - "${PWD}/assets:/assets"
-      - "${PWD}/volumes/etc/gitlab-runner1:/etc/gitlab-runner:Z"
+      - "gitlab_runner_conf:/etc/gitlab-runner:Z"
+      - "/var/cache:/cache:Z"
       - "/var/run/docker.sock:/var/run/docker.sock"
 
 
   gitlab-runner2:
-    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    image: gitlab/gitlab-runner:${GITLAB_RUNNER_VERSION}
     container_name: runner2
     hostname: runner2
     env_file: .env
@@ -144,11 +161,12 @@ services:
       - gitlab
     volumes: 
       - "${PWD}/assets:/assets"
-      - "${PWD}/volumes/etc/gitlab-runner2:/etc/gitlab-runner:Z"
+      - "gitlab_runner_conf:/etc/gitlab-runner:Z"
+      - "/var/cache:/cache:Z"
       - "/var/run/docker.sock:/var/run/docker.sock"
 
   gitlab-runner3:
-    image: gitlab/gitlab-runner:alpine-v${GITLAB_VERSION}
+    image: gitlab/gitlab-runner:${GITLAB_RUNNER_VERSION}
     container_name: runner3
     hostname: runner3
     env_file: .env
@@ -158,11 +176,8 @@ services:
       - gitlab
     volumes: 
       - "${PWD}/assets:/assets"
-      - "${PWD}/volumes/etc/gitlab-runner3:/etc/gitlab-runner:Z"
+      - "gitlab_runner_conf:/etc/gitlab-runner:Z"
+      - "/var/cache:/cache:Z"
       - "/var/run/docker.sock:/var/run/docker.sock"
 
-networks:
-  web:
-    external: true
-      
 

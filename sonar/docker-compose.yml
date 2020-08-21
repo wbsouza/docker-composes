@@ -40,9 +40,11 @@ services:
       - sonar.core.serverBaseURL=https://sonar.${DOMAIN_NAME}
       - sonar.auth.gitlab.enabled=true
       - sonar.auth.gitlab.url=https://gitlab.${DOMAIN_NAME}
-      - sonar.auth.gitlab.applicationId=9e73f676a2469cfc0755b2196fbcfa11cf42d65bcd42bfefd30db4538b21d758
-      - sonar.auth.gitlab.secret=d3ed97bd1dc10d4be8982aa54916610bbafb67b2a1c661949f16491a8e31cf4f
+      - sonar.auth.gitlab.applicationId=551e64f2dcd62c464cfc0b18e731bc4372f0498966b17e0041d45297ef9a3332
+      - sonar.auth.gitlab.secret=1b1913543b258148060facf0d9b762b81fc1c1aaeae5e8a3575cb7230bf40a63
       - sonar.pullrequest.gitlab.instanceUrl=https://gitlab.${DOMAIN_NAME}
+    ports:
+      - "9000:9000"
     volumes:
       - sonar_conf:/opt/sonarqube/conf
       - sonar_lib:/opt/sonarqube/lib
