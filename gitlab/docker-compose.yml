@@ -180,4 +180,33 @@ services:
       - "/var/cache:/cache:Z"
       - "/var/run/docker.sock:/var/run/docker.sock"
 
+  gitlab-runner4:
+    image: gitlab/gitlab-runner:${GITLAB_RUNNER_VERSION}
+    container_name: runner4
+    hostname: runner4
+    env_file: .env
+    networks:
+      - web
+    depends_on:
+      - gitlab
+    volumes: 
+      - "${PWD}/assets:/assets"
+      - "gitlab_runner_conf:/etc/gitlab-runner:Z"
+      - "/var/cache:/cache:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  gitlab-runner5:
+    image: gitlab/gitlab-runner:${GITLAB_RUNNER_VERSION}
+    container_name: runner5
+    hostname: runner5
+    env_file: .env
+    networks:
+      - web
+    depends_on:
+      - gitlab
+    volumes: 
+      - "${PWD}/assets:/assets"
+      - "gitlab_runner_conf:/etc/gitlab-runner:Z"
+      - "/var/cache:/cache:Z"
+      - "/var/run/docker.sock:/var/run/docker.sock"
 

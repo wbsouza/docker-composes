@@ -92,6 +92,9 @@ gitlab_rails['redis_database'] = 8
 gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD}'
 gitlab_rails['gitlab_shell_ssh_port'] = ${GITLAB_SSH_PORT}
 
+# Enable Packages (ie: Maven Repository)
+gitlab_rails['packages_enabled'] = true
+
 ################################################################################
 ## GitLab NGINX
 ##! Docs: https://docs.gitlab.com/omnibus/settings/nginx.html

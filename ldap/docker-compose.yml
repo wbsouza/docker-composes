@@ -1,0 +1,47 @@
+version: '2.3'
+networks:
+  web:
+    external: true
+
+volumes:
+  ldap-data:
+    
+
+services: 
+
+  open-ldap:
+    container_name: open-ldap
+    hostname: open-ldap
+    image: osixia/openldap:latest
+    networks:
+      - web
+    #ports: 
+    #  - "389:389"
+    #  - "636:636"
+    env_file:
+      - .env
+    volumes:
+      - "ldap-data:/var/lib/ldap"
+      - "${PWD}/assets/ldif:/data/ldif"
+
+  ldap-ui:
+    container_name: ldap-ui
+    hostname: ldap.wisecoding.io
+    image: computersciencehouse/ldap-account-manager
+    networks:
+      - web
+    env_file:
+      - .env
+    labels:
+      #### Labels define the behavior and rules of the traefik proxy for this container ####
+      - "traefik.enable=true"
+      - "traefik.http.routers.ldap-http.rule=Host(`ldap.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.ldap-http.entrypoints=http"
+      - "traefik.http.routers.ldap-http.service=ldap"
+      - "traefik.http.routers.ldap-http.middlewares=redirect@file"
+      - "traefik.http.routers.ldap-https.rule=Host(`ldap.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.ldap-https.entrypoints=https"
+      - "traefik.http.routers.ldap-https.service=ldap"
+      - "traefik.http.routers.ldap-https.tls.certresolver=omega_httpchallenge"
+      - "traefik.http.services.ldap.loadbalancer.server.port=8080"
+

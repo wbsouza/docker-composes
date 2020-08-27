@@ -3,3 +3,6 @@ volumes/
 .idea/
 .history/
 .env
+gitlab/assets/gitlab.rb
+traefik/etc/
+

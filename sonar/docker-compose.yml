@@ -1,4 +1,4 @@
-version: "3"
+version: "2.3"
 networks:
   web:
     external: true
@@ -22,6 +22,11 @@ services:
       - POSTGRES_PASSWORD=${SONAR_DATABASE_PASSWORD}
     volumes:
       - sonar_postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   sonar:
     image: sonarqube:8.2-community
@@ -31,39 +36,28 @@ services:
     depends_on:
       - sonar_db
     env_file: .env
-    environment:
-      - sonar.jdbc.username=${SONAR_DATABASE_USERNAME}
-      - sonar.jdbc.password=${SONAR_DATABASE_PASSWORD}
-      - sonar.jdbc.url=jdbc:postgresql://sonar_db:5432/sonar
-
-      # GitLab OAuth Configurations
-      - sonar.core.serverBaseURL=https://sonar.${DOMAIN_NAME}
-      - sonar.auth.gitlab.enabled=true
-      - sonar.auth.gitlab.url=https://gitlab.${DOMAIN_NAME}
-      - sonar.auth.gitlab.applicationId=551e64f2dcd62c464cfc0b18e731bc4372f0498966b17e0041d45297ef9a3332
-      - sonar.auth.gitlab.secret=1b1913543b258148060facf0d9b762b81fc1c1aaeae5e8a3575cb7230bf40a63
-      - sonar.pullrequest.gitlab.instanceUrl=https://gitlab.${DOMAIN_NAME}
     ports:
       - "9000:9000"
     volumes:
-      - sonar_conf:/opt/sonarqube/conf
-      - sonar_lib:/opt/sonarqube/lib
-      - sonar_data:/opt/sonarqube/data
-      - sonar_extensions:/opt/sonarqube/extensions
+      - "${PWD}/assets/sonar.properties:/opt/sonarqube/conf/sonar.properties"
+      - "sonar_conf:/opt/sonarqube/conf"
+      - "sonar_lib:/opt/sonarqube/lib"
+      - "sonar_data:/opt/sonarqube/data"
+      - "sonar_extensions:/opt/sonarqube/extensions"
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
     labels:
       #### Labels define the behavior and rules of the traefik proxy for this container ####
-      - "traefik.enable=true" # <== Enable traefik to proxy this container
-      - "traefik.http.routers.sonar-http.rule=Host(`sonar.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
-      - "traefik.http.routers.sonar-http.entrypoints=http" # <== Defining the entrypoint for http, **ref: line 30
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonar-http.rule=Host(`sonar.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.sonar-http.entrypoints=http"
       - "traefik.http.routers.sonar-http.service=sonar"
-      - "traefik.http.routers.sonar-http.middlewares=redirect@file" # <== This is a middleware to redirect to https
-      - "traefik.http.routers.sonar-https.rule=Host(`sonar.${DOMAIN_NAME}`)" # <== Your Domain Name goes here for the http rule
-      - "traefik.http.routers.sonar-https.entrypoints=https" # <== Defining entrypoint for https, **ref: line 31
+      - "traefik.http.routers.sonar-http.middlewares=redirect@file"
+      - "traefik.http.routers.sonar-https.rule=Host(`sonar.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.sonar-https.entrypoints=https"
       - "traefik.http.routers.sonar-https.service=sonar"
-      - "traefik.http.routers.sonar-https.tls.certresolver=omega_httpchallenge" # <== Defining certsresolvers for https
+      - "traefik.http.routers.sonar-https.tls.certresolver=omega_httpchallenge"
       - "traefik.http.services.sonar.loadbalancer.server.port=9000"
 

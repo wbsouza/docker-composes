@@ -11,7 +11,7 @@ else
 
   echo "Registering runners with the registration_token=${REGISTRATION_TOKEN} ..."
 
-  for RUNNER in runner1 runner2 runner3
+  for RUNNER in runner1 runner2 runner3 runner4 runner5
   do
     docker exec -it $RUNNER gitlab-runner register \
       --non-interactive \
@@ -22,6 +22,7 @@ else
       --executor docker \
       --docker-image docker:stable \
       --docker-volumes "/var/run/docker.sock:/var/run/docker.sock" \
+      --docker-volumes "/var/cache/gitlab-runner:/cache" \
       --docker-network-mode web
   done
 fi

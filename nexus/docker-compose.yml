@@ -1,0 +1,32 @@
+version: '2.3'
+networks:
+  web:
+    external: true
+
+volumes:
+  nexus-data:
+
+services:
+  nexus:
+    container_name: nexus
+    image: sonatype/nexus3
+    networks:
+      - web
+    env_file:
+      - .env
+    volumes:
+      - nexus-data:/nexus-data
+    labels:
+      #### Labels define the behavior and rules of the traefik proxy for this container ####
+      - "traefik.enable=true"
+      - "traefik.http.routers.maven-http.rule=Host(`maven.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.maven-http.entrypoints=http"
+      - "traefik.http.routers.maven-http.service=maven"
+      - "traefik.http.routers.maven-http.middlewares=redirect@file"
+      - "traefik.http.routers.maven-https.rule=Host(`maven.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.maven-https.entrypoints=https"
+      - "traefik.http.routers.maven-https.service=maven"
+      - "traefik.http.routers.maven-https.tls.certresolver=omega_httpchallenge"
+      - "traefik.http.services.maven.loadbalancer.server.port=8081"
+
+

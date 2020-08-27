@@ -1,0 +1,49 @@
+dn: cn=Wellington Souza,ou=users,dc=wisecoding,dc=io
+objectClass: inetOrgPerson
+objectClass: person
+objectClass: organizationalPerson
+objectClass: posixAccount
+objectClass: top
+uid: wellington
+uidNumber: 70000
+gidNumber: 70001
+homeDirectory: /home/wellington
+givenName: Wellington
+sn: Souza
+displayName: Wellington Souza
+cn: Wellington Souza
+mail: wellington@wisecoding.io
+telephoneNumber: (604) 722-4598
+title: CTO
+userPassword: {SHA}RKkNn7+KoG94IN3x/B2jnm/4DS0=
+
+dn: cn=admins,ou=groups,dc=wisecoding,dc=io
+changetype: modify
+add: uniqueMember
+uniqueMember: cn=Wellington Souza,ou=users,dc=wisecoding,dc=io
+
+
+dn: cn=Daniel Moraes,ou=users,dc=wisecoding,dc=io
+objectClass: inetOrgPerson
+objectClass: person
+objectClass: organizationalPerson
+objectClass: posixAccount
+objectClass: top
+uid: daniel
+uidNumber: 70002
+gidNumber: 70003
+homeDirectory: /home/daniel
+givenName: Daniel
+sn: Moraes
+displayName: Daniel Moraes
+cn: Daniel Moraes
+mail: daniel@wisecoding.io
+manager: cn=Wellington Souza,ou=users,dc=wisecoding,dc=io
+telephoneNumber: (778) 201-5835
+title: General Manager of Professional Services
+userPassword: {SHA}RKkNn7+KoG94IN3x/B2jnm/4DS0=
+
+dn: cn=Operations,ou=groups,dc=wisecoding,dc=io
+changetype: modify
+add: uniqueMember
+uniqueMember: cn=Daniel Moraes,ou=users,dc=wisecoding,dc=io
