@@ -1,0 +1,43 @@
+version: "2.3"
+
+networks:
+  web:
+    external: true
+
+volumes:
+  jira_data:
+  postgres_data:
+
+
+services:
+  jira_db:
+    image: postgres
+    container_name: jira_db
+    networks:
+      - web
+    env_file: .env
+    volumes:
+      - "postgres_data:/var/lib/postgresql/data"
+
+  jira:
+    depends_on:
+      - jira_db
+    image: atlassian/jira-software:8.12
+    networks:
+      - web
+    volumes:
+      - "jira_data:/var/atlassian/jira"
+    env_file: .env
+    labels:
+      #### Labels define the behavior and rules of the traefik proxy for this container ####
+      - "traefik.enable=true"
+      - "traefik.http.routers.jira-http.rule=Host(`jira.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.jira-http.entrypoints=http"
+      - "traefik.http.routers.jira-http.service=jira"
+      - "traefik.http.routers.jira-http.middlewares=redirect@file"
+      - "traefik.http.routers.jira-https.rule=Host(`jira.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.jira-https.entrypoints=https"
+      - "traefik.http.routers.jira-https.service=jira"
+      - "traefik.http.routers.jira-https.tls.certresolver=omega_httpchallenge"
+      - "traefik.http.services.jira.loadbalancer.server.port=8080"
+

@@ -11,7 +11,10 @@ fi
 (cd traefik; $DOCKER_COMPOSE up -d)
 (cd sonar; $DOCKER_COMPOSE up -d)
 (cd gitlab; $DOCKER_COMPOSE up -d)
+(cd jira; $DOCKER_COMPOSE up -d)
 (cd plantuml; $DOCKER_COMPOSE up -d)
+(cd ldap; $DOCKER_COMPOSE up -d)
+(cd nexus; $DOCKER_COMPOSE up -d)
 
 NET_DEVICE=$(ip route | grep default | grep -v tun | awk '{ print $5 }' | sed -z 's/\n//')
 HOST_IP=$(ip route| grep $NET_DEVICE | grep -v default | grep src | awk '{ print $9 }' | sed -z 's/\n//')
